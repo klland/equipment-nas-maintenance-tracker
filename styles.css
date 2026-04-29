@@ -47,6 +47,14 @@ button { cursor: pointer; }
   gap: 8px;
 }
 
+.top-actions > .ghost-button,
+.top-actions > .import-button {
+  width: 112px;
+  min-height: 42px;
+  justify-content: center;
+  text-align: center;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: var(--accent-dark);
