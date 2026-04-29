@@ -3,157 +3,172 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>設備與 NAS 維護追蹤系統</title>
+    <title>NAS / 網路設備巡檢與異常追蹤系統</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Maintenance Tracker</p>
-          <h1>設備與 NAS 維護追蹤系統</h1>
-          <p class="subtitle">以家用 NAS、網路設備作為實作場景，模擬設備異常紀錄、處理追蹤與改善分析。</p>
+          <p class="eyebrow">Home Maintenance Console</p>
+          <h1>NAS / 網路設備巡檢與異常追蹤系統</h1>
+          <p class="subtitle">用家中 NAS、路由器、交換器和工作站做實際巡檢：檢查管理頁連線、記錄容量/備份/硬碟狀態，並把異常處理成可追蹤的維修履歷。</p>
         </div>
-        <div class="status-pill">
-          <span class="status-dot"></span>
-          Demo Ready
+        <div class="top-actions">
+          <button id="exportData" class="ghost-button" type="button">匯出 JSON</button>
+          <label class="import-button">匯入 JSON<input id="importData" type="file" accept="application/json" /></label>
         </div>
       </header>
 
-      <section class="metrics" aria-label="維護指標">
-        <article>
-          <span>未完成案件</span>
-          <strong id="openCount">0</strong>
-        </article>
-        <article>
-          <span>平均停機時間</span>
-          <strong id="avgDowntime">0h</strong>
-        </article>
-        <article>
-          <span>本月完成</span>
-          <strong id="doneCount">0</strong>
-        </article>
-        <article>
-          <span>高優先級</span>
-          <strong id="highPriorityCount">0</strong>
-        </article>
+      <section class="notice">
+        <strong>能力邊界：</strong>
+        本頁可做 HTTP/HTTPS 管理頁連線探測、巡檢表、紀錄和統計。瀏覽器不能直接做 ICMP ping、讀 NAS SMART、讀 UPS 電池或自動修改設備參數；這些項目會標示為手動確認。
       </section>
 
-      <section class="workspace">
-        <form id="incidentForm" class="panel form-panel">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">New Record</p>
-              <h2>新增異常紀錄</h2>
-            </div>
-            <button type="reset" class="ghost-button">清空</button>
-          </div>
-
-          <label>
-            設備名稱
-            <select name="asset" required>
-              <option value="NAS-01">NAS-01 家用備份伺服器</option>
-              <option value="Router-01">Router-01 主要路由器</option>
-              <option value="Switch-01">Switch-01 交換器</option>
-              <option value="PC-01">PC-01 工作站</option>
-            </select>
-          </label>
-
-          <div class="field-grid">
-            <label>
-              異常類型
-              <select name="type" required>
-                <option value="硬碟/儲存">硬碟/儲存</option>
-                <option value="網路連線">網路連線</option>
-                <option value="權限設定">權限設定</option>
-                <option value="溫度/散熱">溫度/散熱</option>
-                <option value="參數調整">參數調整</option>
-              </select>
-            </label>
-
-            <label>
-              優先級
-              <select name="priority" required>
-                <option value="高">高</option>
-                <option value="中" selected>中</option>
-                <option value="低">低</option>
-              </select>
-            </label>
-          </div>
-
-          <label>
-            問題描述
-            <textarea name="summary" rows="3" placeholder="例：備份速度下降，檢查後懷疑網路或硬碟 I/O 異常" required></textarea>
-          </label>
-
-          <div class="field-grid">
-            <label>
-              停機時間（小時）
-              <input name="downtime" type="number" min="0" step="0.5" value="1" required />
-            </label>
-
-            <label>
-              處理狀態
-              <select name="status" required>
-                <option value="待處理">待處理</option>
-                <option value="處理中" selected>處理中</option>
-                <option value="已完成">已完成</option>
-              </select>
-            </label>
-          </div>
-
-          <label>
-            處理方式 / 參數調整
-            <textarea name="action" rows="3" placeholder="例：檢查 S.M.A.R.T.、調整備份排程、重新測試傳輸速度" required></textarea>
-          </label>
-
-          <button class="primary-button" type="submit">加入紀錄</button>
-        </form>
-
-        <section class="panel list-panel">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Tracking</p>
-              <h2>維修追蹤</h2>
-            </div>
-            <select id="filterStatus" aria-label="篩選狀態">
-              <option value="全部">全部</option>
-              <option value="待處理">待處理</option>
-              <option value="處理中">處理中</option>
-              <option value="已完成">已完成</option>
-            </select>
-          </div>
-          <div id="incidentList" class="incident-list"></div>
-        </section>
+      <section class="metrics" aria-label="巡檢指標">
+        <article><span>設備數</span><strong id="deviceCount">0</strong></article>
+        <article><span>需注意</span><strong id="attentionCount">0</strong></article>
+        <article><span>未結案</span><strong id="openIssueCount">0</strong></article>
+        <article><span>最近巡檢</span><strong id="lastInspection">-</strong></article>
       </section>
 
-      <section class="insights">
-        <section class="panel">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Analysis</p>
-              <h2>異常分類統計</h2>
-            </div>
-          </div>
-          <div id="typeChart" class="bar-list"></div>
-        </section>
+      <nav class="tabs" aria-label="主要功能">
+        <button class="tab active" type="button" data-tab="dashboard">總覽</button>
+        <button class="tab" type="button" data-tab="devices">設備</button>
+        <button class="tab" type="button" data-tab="inspection">巡檢</button>
+        <button class="tab" type="button" data-tab="issues">異常</button>
+        <button class="tab" type="button" data-tab="sop">SOP</button>
+      </nav>
 
-        <section class="panel">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">Interview Note</p>
-              <h2>作品說明重點</h2>
+      <section id="dashboard" class="tab-panel active">
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="section-head">
+              <div><p class="eyebrow">Connection Probe</p><h2>管理頁連線探測</h2></div>
+              <button id="checkAll" class="primary-button compact" type="button">檢查全部</button>
             </div>
-          </div>
-          <ul class="talking-points">
-            <li>把家用 NAS 與網路設備當作小型設備現場，練習異常紀錄與追蹤。</li>
-            <li>紀錄停機時間、優先級、處理方式，方便後續分析重複問題。</li>
-            <li>概念可延伸到產線設備、廠務設備與預防性保養管理。</li>
-          </ul>
+            <p class="helper">這不是 ICMP ping。若設備阻擋 CORS、使用自簽憑證或非 HTTP 服務，結果可能只能顯示「無法由瀏覽器確認」。</p>
+            <div id="probeList" class="device-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="section-head"><div><p class="eyebrow">Risk Board</p><h2>需注意設備</h2></div></div>
+            <div id="riskList" class="stack"></div>
+          </section>
+        </div>
+
+        <div class="dashboard-grid lower">
+          <section class="panel">
+            <div class="section-head"><div><p class="eyebrow">History</p><h2>最近巡檢紀錄</h2></div></div>
+            <div id="recentInspections" class="stack"></div>
+          </section>
+          <section class="panel">
+            <div class="section-head"><div><p class="eyebrow">Issue Status</p><h2>異常狀態分布</h2></div></div>
+            <div id="issueChart" class="bar-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="devices" class="tab-panel">
+        <div class="workspace">
+          <form id="deviceForm" class="panel form-panel">
+            <div class="section-head">
+              <div><p class="eyebrow">Asset</p><h2 id="deviceFormTitle">新增設備</h2></div>
+              <button id="cancelEditDevice" class="ghost-button hidden" type="button">取消編輯</button>
+            </div>
+            <input name="id" type="hidden" />
+            <label>設備名稱<input name="name" required placeholder="例：NAS-01" /></label>
+            <div class="field-grid">
+              <label>類型<select name="type" required><option value="NAS">NAS</option><option value="Router">Router</option><option value="Switch">Switch</option><option value="PC">PC</option><option value="UPS">UPS</option><option value="AP">AP</option></select></label>
+              <label>重要度<select name="criticality" required><option value="高">高</option><option value="中" selected>中</option><option value="低">低</option></select></label>
+            </div>
+            <div class="field-grid">
+              <label>IP<input name="ip" inputmode="decimal" placeholder="192.168.1.10" required /></label>
+              <label>位置<input name="location" placeholder="例：書房 / 弱電箱" required /></label>
+            </div>
+            <label>管理頁 / 檢查 URL<input name="url" placeholder="http://192.168.1.10:5000" /></label>
+            <label>用途 / 備註<textarea name="note" rows="3" placeholder="例：照片備份、Time Machine、檔案共享"></textarea></label>
+            <button class="primary-button" type="submit">儲存設備</button>
+          </form>
+
+          <section class="panel list-panel">
+            <div class="section-head">
+              <div><p class="eyebrow">Inventory</p><h2>設備清單</h2></div>
+              <select id="deviceFilter" aria-label="篩選設備"><option value="全部">全部</option><option value="正常">正常</option><option value="注意">注意</option><option value="異常">異常</option><option value="未巡檢">未巡檢</option></select>
+            </div>
+            <div id="deviceList" class="device-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="inspection" class="tab-panel">
+        <div class="workspace">
+          <form id="inspectionForm" class="panel form-panel">
+            <div class="section-head"><div><p class="eyebrow">Checklist</p><h2>新增巡檢紀錄</h2></div></div>
+            <label>巡檢設備<select name="deviceId" id="inspectionDevice" required></select></label>
+            <div class="field-grid">
+              <label>容量使用率 % <span class="manual">手動確認</span><input name="capacity" type="number" min="0" max="100" value="62" required /></label>
+              <label>溫度 °C <span class="manual">手動確認</span><input name="temperature" type="number" min="0" max="120" value="38" required /></label>
+            </div>
+            <div class="field-grid">
+              <label>備份狀態 <span class="manual">手動確認</span><select name="backupStatus"><option value="成功">成功</option><option value="逾期">逾期</option><option value="失敗">失敗</option><option value="不適用">不適用</option></select></label>
+              <label>硬碟 / RAID 狀態 <span class="manual">手動確認</span><select name="diskStatus"><option value="正常">正常</option><option value="注意">注意</option><option value="降級">降級</option><option value="不適用">不適用</option></select></label>
+            </div>
+            <fieldset class="check-grid">
+              <legend>現場確認項目</legend>
+              <label><input type="checkbox" name="checks" value="管理頁可登入" checked /> 管理頁可登入</label>
+              <label><input type="checkbox" name="checks" value="電源/線材正常" checked /> 電源/線材正常</label>
+              <label><input type="checkbox" name="checks" value="韌體版本確認" /> 韌體版本確認</label>
+              <label><input type="checkbox" name="checks" value="備份排程確認" checked /> 備份排程確認</label>
+            </fieldset>
+            <label>巡檢結論<select name="result" required><option value="正常">正常</option><option value="注意">注意</option><option value="異常">異常</option></select></label>
+            <label>處理紀錄 / 下次追蹤<textarea name="note" rows="4" placeholder="例：容量達 82%，調整備份保留週期，下週再追蹤。"></textarea></label>
+            <button class="primary-button" type="submit">儲存巡檢</button>
+          </form>
+
+          <section class="panel">
+            <div class="section-head"><div><p class="eyebrow">What To Check</p><h2>巡檢重點</h2></div></div>
+            <div class="guide-list">
+              <article><strong>NAS</strong><span>容量、備份結果、硬碟/RAID、溫度、權限、韌體版本。</span></article>
+              <article><strong>Router / Switch</strong><span>管理頁連線、Port 燈號、IP 設定、線材與電源。</span></article>
+              <article><strong>PC / UPS</strong><span>磁碟健康、溫度、事件紀錄、電池狀態、最近維護時間。</span></article>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="issues" class="tab-panel">
+        <div class="workspace">
+          <form id="issueForm" class="panel form-panel">
+            <div class="section-head"><div><p class="eyebrow">Trouble Ticket</p><h2>新增異常處理單</h2></div></div>
+            <label>關聯設備<select name="deviceId" id="issueDevice" required></select></label>
+            <label>異常現象<input name="title" placeholder="例：NAS 備份失敗 / Router 管理頁無法連線" required /></label>
+            <div class="field-grid">
+              <label>類型<select name="type"><option value="連線">連線</option><option value="備份">備份</option><option value="容量">容量</option><option value="硬體">硬體</option><option value="參數">參數</option></select></label>
+              <label>優先級<select name="priority"><option value="高">高</option><option value="中" selected>中</option><option value="低">低</option></select></label>
+            </div>
+            <label>初步判斷 / 根因<textarea name="cause" rows="3" placeholder="例：容量不足導致備份中斷，需調整保留週期。"></textarea></label>
+            <label>處理方式 / 永久對策<textarea name="action" rows="3" placeholder="例：刪除舊快照、重新執行備份、觀察 24 小時。"></textarea></label>
+            <button class="primary-button" type="submit">建立處理單</button>
+          </form>
+
+          <section class="panel">
+            <div class="section-head">
+              <div><p class="eyebrow">Follow Up</p><h2>異常追蹤</h2></div>
+              <select id="issueFilter" aria-label="篩選異常"><option value="全部">全部</option><option value="待處理">待處理</option><option value="處理中">處理中</option><option value="已完成">已完成</option></select>
+            </div>
+            <div id="issueList" class="stack"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="sop" class="tab-panel">
+        <section class="panel">
+          <div class="section-head"><div><p class="eyebrow">SOP</p><h2>常見異常排查流程</h2></div></div>
+          <div id="sopList" class="sop-grid"></div>
         </section>
       </section>
     </main>
-
     <script src="app.js"></script>
   </body>
 </html>
