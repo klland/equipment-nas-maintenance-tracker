@@ -33,10 +33,13 @@ const elements = {
   deviceForm: document.querySelector("#deviceForm"),
   deviceFormTitle: document.querySelector("#deviceFormTitle"),
   cancelEditDevice: document.querySelector("#cancelEditDevice"),
+  quickInspectionForm: document.querySelector("#quickInspectionForm"),
+  quickInspectionDevice: document.querySelector("#quickInspectionDevice"),
   deviceList: document.querySelector("#deviceList"),
   deviceFilter: document.querySelector("#deviceFilter"),
   inspectionForm: document.querySelector("#inspectionForm"),
   inspectionDevice: document.querySelector("#inspectionDevice"),
+  inspectionTable: document.querySelector("#inspectionTable"),
   issueForm: document.querySelector("#issueForm"),
   issueDevice: document.querySelector("#issueDevice"),
   issueList: document.querySelector("#issueList"),
@@ -53,6 +56,7 @@ document.querySelectorAll("[data-tab]").forEach((button) => {
 
 elements.deviceForm.addEventListener("submit", saveDevice);
 elements.cancelEditDevice.addEventListener("click", resetDeviceForm);
+elements.quickInspectionForm.addEventListener("submit", saveQuickInspection);
 elements.deviceFilter.addEventListener("change", render);
 elements.inspectionForm.addEventListener("submit", saveInspection);
 elements.issueForm.addEventListener("submit", saveIssue);
@@ -227,6 +231,22 @@ function resetDeviceForm() {
 function saveInspection(event) {
   event.preventDefault();
   const form = new FormData(elements.inspectionForm);
+  const inspection = createInspection(form, text(form.get("result")));
+  applyInspection(inspection);
+  elements.inspectionForm.reset();
+  render();
+}
+
+function saveQuickInspection(event) {
+  event.preventDefault();
+  const form = new FormData(elements.quickInspectionForm);
+  const inspection = createInspection(form);
+  applyInspection(inspection);
+  elements.quickInspectionForm.reset();
+  render();
+}
+
+function createInspection(form, explicitResult) {
   const inspection = {
     id: createId(),
     deviceId: text(form.get("deviceId")),
@@ -236,17 +256,19 @@ function saveInspection(event) {
     backupStatus: text(form.get("backupStatus")),
     diskStatus: text(form.get("diskStatus")),
     checks: form.getAll("checks").map(text),
-    result: text(form.get("result")),
+    result: explicitResult || deriveInspectionResult(form),
     note: text(form.get("note")),
   };
+  return inspection;
+}
 
+function applyInspection(inspection) {
+  if (!inspection.deviceId) return;
   state.inspections = [inspection, ...state.inspections];
   state.devices = state.devices.map((device) =>
     device.id === inspection.deviceId ? { ...device, status: inspection.result } : device,
   );
   persist();
-  elements.inspectionForm.reset();
-  render();
 }
 
 function saveIssue(event) {
@@ -384,6 +406,7 @@ function render() {
   renderRecentInspections();
   renderIssueChart();
   renderDeviceList();
+  renderInspectionTable();
   renderIssueList();
   renderSop();
 }
@@ -404,6 +427,7 @@ function renderSelectors() {
     .join("");
   const empty = `<option value="">請先新增設備</option>`;
   elements.inspectionDevice.innerHTML = options || empty;
+  elements.quickInspectionDevice.innerHTML = options || empty;
   elements.issueDevice.innerHTML = options || empty;
 }
 
@@ -526,12 +550,19 @@ function renderDeviceList() {
     return;
   }
   elements.deviceList.innerHTML = devices.map(renderDeviceCard).join("");
+  bind("[data-quick-inspect]", (button) => focusQuickInspection(button.dataset.quickInspect));
   bind("[data-edit-device]", (button) => editDevice(button.dataset.editDevice));
   bind("[data-delete-device]", (button) => deleteDevice(button.dataset.deleteDevice));
 }
 
+function focusQuickInspection(id) {
+  elements.quickInspectionDevice.value = id;
+  elements.quickInspectionForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function renderDeviceCard(device) {
   const latest = latestInspection(device.id);
+  const health = latest ? inspectionHealth(latest) : [];
   return `
     <article class="card">
       <div class="card-top">
@@ -541,18 +572,79 @@ function renderDeviceCard(device) {
         </div>
         <span class="tag ${statusClass(device.status)}">${escapeHtml(device.status)}</span>
       </div>
+      <div class="health-grid">
+        <div class="health-cell">
+          <span>最近巡檢</span>
+          <strong>${escapeHtml(latest?.date || "無")}</strong>
+        </div>
+        <div class="health-cell">
+          <span>容量</span>
+          <strong>${latest ? `${latest.capacity}%` : "未記錄"}</strong>
+          <div class="capacity-track"><div class="capacity-fill ${capacityClass(latest?.capacity)}" style="width: ${latest ? latest.capacity : 0}%"></div></div>
+        </div>
+        <div class="health-cell">
+          <span>備份</span>
+          <strong>${escapeHtml(latest?.backupStatus || "未記錄")}</strong>
+        </div>
+        <div class="health-cell">
+          <span>硬碟/RAID</span>
+          <strong>${escapeHtml(latest?.diskStatus || "未記錄")}</strong>
+        </div>
+      </div>
       <div class="meta-row">
         <span class="tag">重要度 ${escapeHtml(device.criticality)}</span>
-        <span class="tag">最近巡檢 ${escapeHtml(latest?.date || "無")}</span>
-        <span class="tag">容量 ${latest ? `${latest.capacity}%` : "未記錄"}</span>
-        <span class="tag">備份 ${escapeHtml(latest?.backupStatus || "未記錄")}</span>
+        ${health.map((item) => `<span class="tag ${item.className}">${escapeHtml(item.label)}</span>`).join("")}
       </div>
       <p class="muted">${escapeHtml(device.note || "未填用途")}</p>
       <div class="card-actions">
+        <button class="small-button" type="button" data-quick-inspect="${device.id}">快速巡檢</button>
         <button class="small-button" type="button" data-edit-device="${device.id}">編輯</button>
         <button class="small-button" type="button" data-delete-device="${device.id}">刪除</button>
       </div>
     </article>
+  `;
+}
+
+function renderInspectionTable() {
+  if (!elements.inspectionTable) return;
+  if (state.inspections.length === 0) {
+    elements.inspectionTable.innerHTML = emptyState("尚未建立巡檢紀錄。");
+    return;
+  }
+  elements.inspectionTable.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>日期</th>
+          <th>設備</th>
+          <th>容量</th>
+          <th>溫度</th>
+          <th>備份</th>
+          <th>硬碟/RAID</th>
+          <th>結論</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${state.inspections
+          .map((inspection) => {
+            const device = findDevice(inspection.deviceId);
+            return `
+              <tr>
+                <td>${escapeHtml(inspection.date)}</td>
+                <td>${escapeHtml(device?.name || "未知")}</td>
+                <td><span class="table-badge ${capacityClass(inspection.capacity)}">${inspection.capacity}%</span></td>
+                <td>${inspection.temperature}°C</td>
+                <td>${escapeHtml(inspection.backupStatus)}</td>
+                <td>${escapeHtml(inspection.diskStatus)}</td>
+                <td><span class="table-badge ${statusClass(inspection.result)}">${escapeHtml(inspection.result)}</span></td>
+                <td>${escapeHtml(inspection.note || "-")}</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
   `;
 }
 
@@ -627,6 +719,40 @@ function statusClass(status) {
   if (["注意", "處理中", "未巡檢"].includes(status)) return "warn";
   if (["異常", "待處理"].includes(status)) return "danger";
   return "";
+}
+
+function deriveInspectionResult(form) {
+  const capacity = Number(form.get("capacity"));
+  const temperature = Number(form.get("temperature"));
+  const backupStatus = text(form.get("backupStatus"));
+  const diskStatus = text(form.get("diskStatus"));
+
+  if (capacity >= 90 || temperature >= 60 || backupStatus === "失敗" || diskStatus === "降級") return "異常";
+  if (capacity >= 80 || temperature >= 50 || backupStatus === "逾期" || diskStatus === "注意") return "注意";
+  return "正常";
+}
+
+function inspectionHealth(inspection) {
+  const items = [];
+  if (inspection.capacity >= 90) items.push({ label: "容量異常", className: "danger" });
+  else if (inspection.capacity >= 80) items.push({ label: "容量注意", className: "warn" });
+
+  if (inspection.backupStatus === "失敗") items.push({ label: "備份失敗", className: "danger" });
+  else if (inspection.backupStatus === "逾期") items.push({ label: "備份逾期", className: "warn" });
+
+  if (inspection.diskStatus === "降級") items.push({ label: "RAID 降級", className: "danger" });
+  else if (inspection.diskStatus === "注意") items.push({ label: "硬碟注意", className: "warn" });
+
+  if (inspection.temperature >= 60) items.push({ label: "溫度異常", className: "danger" });
+  else if (inspection.temperature >= 50) items.push({ label: "溫度偏高", className: "warn" });
+
+  return items.length ? items : [{ label: "巡檢正常", className: "ok" }];
+}
+
+function capacityClass(value) {
+  if (value >= 90) return "danger";
+  if (value >= 80) return "warn";
+  return "ok";
 }
 
 function createId() {

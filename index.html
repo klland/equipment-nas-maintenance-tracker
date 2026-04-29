@@ -71,25 +71,44 @@
 
       <section id="devices" class="tab-panel">
         <div class="workspace">
-          <form id="deviceForm" class="panel form-panel">
-            <div class="section-head">
-              <div><p class="eyebrow">Asset</p><h2 id="deviceFormTitle">新增設備</h2></div>
-              <button id="cancelEditDevice" class="ghost-button hidden" type="button">取消編輯</button>
-            </div>
-            <input name="id" type="hidden" />
-            <label>設備名稱<input name="name" required placeholder="例：NAS-01" /></label>
-            <div class="field-grid">
-              <label>類型<select name="type" required><option value="NAS">NAS</option><option value="Router">Router</option><option value="Switch">Switch</option><option value="PC">PC</option><option value="UPS">UPS</option><option value="AP">AP</option></select></label>
-              <label>重要度<select name="criticality" required><option value="高">高</option><option value="中" selected>中</option><option value="低">低</option></select></label>
-            </div>
-            <div class="field-grid">
-              <label>IP<input name="ip" inputmode="decimal" placeholder="192.168.1.10" required /></label>
-              <label>位置<input name="location" placeholder="例：書房 / 弱電箱" required /></label>
-            </div>
-            <label>管理頁 / 檢查 URL<input name="url" placeholder="http://192.168.1.10:5000" /></label>
-            <label>用途 / 備註<textarea name="note" rows="3" placeholder="例：照片備份、Time Machine、檔案共享"></textarea></label>
-            <button class="primary-button" type="submit">儲存設備</button>
-          </form>
+          <div class="form-stack">
+            <form id="deviceForm" class="panel form-panel">
+              <div class="section-head">
+                <div><p class="eyebrow">Asset</p><h2 id="deviceFormTitle">新增設備</h2></div>
+                <button id="cancelEditDevice" class="ghost-button hidden" type="button">取消編輯</button>
+              </div>
+              <input name="id" type="hidden" />
+              <label>設備名稱<input name="name" required placeholder="例：NAS-01" /></label>
+              <div class="field-grid">
+                <label>類型<select name="type" required><option value="NAS">NAS</option><option value="Router">Router</option><option value="Switch">Switch</option><option value="PC">PC</option><option value="UPS">UPS</option><option value="AP">AP</option></select></label>
+                <label>重要度<select name="criticality" required><option value="高">高</option><option value="中" selected>中</option><option value="低">低</option></select></label>
+              </div>
+              <div class="field-grid">
+                <label>IP<input name="ip" inputmode="decimal" placeholder="192.168.1.10" required /></label>
+                <label>位置<input name="location" placeholder="例：書房 / 弱電箱" required /></label>
+              </div>
+              <label>管理頁 / 檢查 URL<input name="url" placeholder="http://192.168.1.10:5000" /></label>
+              <label>用途 / 備註<textarea name="note" rows="3" placeholder="例：照片備份、Time Machine、檔案共享"></textarea></label>
+              <button class="primary-button" type="submit">儲存設備</button>
+            </form>
+
+            <form id="quickInspectionForm" class="panel form-panel">
+              <div class="section-head">
+                <div><p class="eyebrow">Quick Check</p><h2>快速巡檢</h2></div>
+              </div>
+              <label>設備<select name="deviceId" id="quickInspectionDevice" required></select></label>
+              <div class="field-grid">
+                <label>容量 % <span class="manual">手動確認</span><input name="capacity" type="number" min="0" max="100" value="60" required /></label>
+                <label>溫度 °C <span class="manual">手動確認</span><input name="temperature" type="number" min="0" max="120" value="38" required /></label>
+              </div>
+              <div class="field-grid">
+                <label>備份<select name="backupStatus"><option value="成功">成功</option><option value="逾期">逾期</option><option value="失敗">失敗</option><option value="不適用">不適用</option></select></label>
+                <label>硬碟 / RAID<select name="diskStatus"><option value="正常">正常</option><option value="注意">注意</option><option value="降級">降級</option><option value="不適用">不適用</option></select></label>
+              </div>
+              <label>巡檢備註<textarea name="note" rows="3" placeholder="例：容量正常，備份成功，下次月底再檢查。"></textarea></label>
+              <button class="primary-button" type="submit">儲存快速巡檢</button>
+            </form>
+          </div>
 
           <section class="panel list-panel">
             <div class="section-head">
@@ -132,6 +151,10 @@
               <article><strong>NAS</strong><span>容量、備份結果、硬碟/RAID、溫度、權限、韌體版本。</span></article>
               <article><strong>Router / Switch</strong><span>管理頁連線、Port 燈號、IP 設定、線材與電源。</span></article>
               <article><strong>PC / UPS</strong><span>磁碟健康、溫度、事件紀錄、電池狀態、最近維護時間。</span></article>
+            </div>
+            <div class="table-block">
+              <div class="section-head table-title"><div><p class="eyebrow">Log Table</p><h2>巡檢紀錄表</h2></div></div>
+              <div id="inspectionTable" class="table-wrap"></div>
             </div>
           </section>
         </div>
