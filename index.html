@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>設備與 NAS 維護追蹤系統</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Maintenance Tracker</p>
+          <h1>設備與 NAS 維護追蹤系統</h1>
+          <p class="subtitle">以家用 NAS、網路設備作為實作場景，模擬設備異常紀錄、處理追蹤與改善分析。</p>
+        </div>
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          Demo Ready
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="維護指標">
+        <article>
+          <span>未完成案件</span>
+          <strong id="openCount">0</strong>
+        </article>
+        <article>
+          <span>平均停機時間</span>
+          <strong id="avgDowntime">0h</strong>
+        </article>
+        <article>
+          <span>本月完成</span>
+          <strong id="doneCount">0</strong>
+        </article>
+        <article>
+          <span>高優先級</span>
+          <strong id="highPriorityCount">0</strong>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <form id="incidentForm" class="panel form-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">New Record</p>
+              <h2>新增異常紀錄</h2>
+            </div>
+            <button type="reset" class="ghost-button">清空</button>
+          </div>
+
+          <label>
+            設備名稱
+            <select name="asset" required>
+              <option value="NAS-01">NAS-01 家用備份伺服器</option>
+              <option value="Router-01">Router-01 主要路由器</option>
+              <option value="Switch-01">Switch-01 交換器</option>
+              <option value="PC-01">PC-01 工作站</option>
+            </select>
+          </label>
+
+          <div class="field-grid">
+            <label>
+              異常類型
+              <select name="type" required>
+                <option value="硬碟/儲存">硬碟/儲存</option>
+                <option value="網路連線">網路連線</option>
+                <option value="權限設定">權限設定</option>
+                <option value="溫度/散熱">溫度/散熱</option>
+                <option value="參數調整">參數調整</option>
+              </select>
+            </label>
+
+            <label>
+              優先級
+              <select name="priority" required>
+                <option value="高">高</option>
+                <option value="中" selected>中</option>
+                <option value="低">低</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            問題描述
+            <textarea name="summary" rows="3" placeholder="例：備份速度下降，檢查後懷疑網路或硬碟 I/O 異常" required></textarea>
+          </label>
+
+          <div class="field-grid">
+            <label>
+              停機時間（小時）
+              <input name="downtime" type="number" min="0" step="0.5" value="1" required />
+            </label>
+
+            <label>
+              處理狀態
+              <select name="status" required>
+                <option value="待處理">待處理</option>
+                <option value="處理中" selected>處理中</option>
+                <option value="已完成">已完成</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            處理方式 / 參數調整
+            <textarea name="action" rows="3" placeholder="例：檢查 S.M.A.R.T.、調整備份排程、重新測試傳輸速度" required></textarea>
+          </label>
+
+          <button class="primary-button" type="submit">加入紀錄</button>
+        </form>
+
+        <section class="panel list-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Tracking</p>
+              <h2>維修追蹤</h2>
+            </div>
+            <select id="filterStatus" aria-label="篩選狀態">
+              <option value="全部">全部</option>
+              <option value="待處理">待處理</option>
+              <option value="處理中">處理中</option>
+              <option value="已完成">已完成</option>
+            </select>
+          </div>
+          <div id="incidentList" class="incident-list"></div>
+        </section>
+      </section>
+
+      <section class="insights">
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Analysis</p>
+              <h2>異常分類統計</h2>
+            </div>
+          </div>
+          <div id="typeChart" class="bar-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Interview Note</p>
+              <h2>作品說明重點</h2>
+            </div>
+          </div>
+          <ul class="talking-points">
+            <li>把家用 NAS 與網路設備當作小型設備現場，練習異常紀錄與追蹤。</li>
+            <li>紀錄停機時間、優先級、處理方式，方便後續分析重複問題。</li>
+            <li>概念可延伸到產線設備、廠務設備與預防性保養管理。</li>
+          </ul>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
